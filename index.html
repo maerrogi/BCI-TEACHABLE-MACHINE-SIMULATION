@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BCI Sim: Focus vs Relax</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      transition: background-color 0.5s ease;
+    }
+    video {
+      width: 300px;
+      margin-top: 20px;
+      border-radius: 10px;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 Mind State: <span id="label">Loading...</span></h1>
+  <video id="webcam" autoplay playsinline></video>
+
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <script>
+    const URL = "https://teachablemachine.withgoogle.com/models/f11it_WlS/";
+
+    let model, webcam, maxPredictions;
+
+    async function init() {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      webcam = new tmImage.Webcam(300, 300, true);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
+
+      document.getElementById("webcam").appendChild(webcam.canvas);
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      let topPrediction = prediction[0];
+
+      for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > topPrediction.probability) {
+          topPrediction = prediction[i];
+        }
+      }
+
+      const label = topPrediction.className;
+      const confidence = topPrediction.probability.toFixed(2);
+      document.getElementById("label").innerText = `${label} (${confidence})`;
+
+      if (label === "Focus") {
+        document.body.style.backgroundColor = "#b3e5fc";
+      } else if (label === "Relax") {
+        document.body.style.backgroundColor = "#c8e6c9";
+      } else {
+        document.body.style.backgroundColor = "#eeeeee";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
